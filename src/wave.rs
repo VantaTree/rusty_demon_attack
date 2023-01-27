@@ -1,5 +1,4 @@
 use macroquad::prelude::*;
-use quad_snd::mixer::{SoundMixer, Volume};
 
 use crate::{
     constants::*,
@@ -78,7 +77,6 @@ impl WaveManager {
         dt: f32,
         enemies: &mut Vec<Enemy>,
         resources: &Resources,
-        sound_mixer: &mut SoundMixer,
     ) -> Option<WaveManagerMessage> {
         self.internal_timer += dt;
         let state_command_optional = match &mut self.state {
@@ -87,7 +85,6 @@ impl WaveManager {
                 dt,
                 enemies,
                 resources,
-                sound_mixer,
             ),
             WaveManagerState::Battle => Self::update_state_battle(enemies, &self.internal_timer),
         };
@@ -134,7 +131,6 @@ impl WaveManager {
         dt: f32,
         enemies: &mut Vec<Enemy>,
         resources: &Resources,
-        sound_mixer: &mut SoundMixer,
     ) -> Option<WaveManagerCommand> {
         game_state_spawning.spawn_timer += dt;
         if game_state_spawning.spawn_timer > ENEMY_SPAWN_TIME {
@@ -146,7 +142,7 @@ impl WaveManager {
                 SpawnBlueprint::Normal,
                 EnemyColor::random(),
             );
-            resources.play_sound(SoundIdentifier::Spawn, sound_mixer, Volume(0.4f32));
+            resources.play_sfx(SoundIdentifier::Spawn, 0.4);
         }
         if game_state_spawning.enemies_left <= 0 {
             return Some(WaveManagerCommand::ChangeState(WaveManagerState::Battle));

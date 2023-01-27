@@ -1,6 +1,4 @@
 use macroquad::prelude::*;
-use quad_snd::mixer::SoundMixer;
-
 use constants::*;
 use game::{GameManager, GameState, GameStateGame, GameStateIdentifier, GameStateMenu};
 use resources::load_resources;
@@ -33,7 +31,6 @@ fn variant_eq<T>(a: &T, b: &T) -> bool {
 async fn main() {
     let game_render_target = render_target(GAME_SIZE_X as u32, GAME_SIZE_Y as u32);
     let resources = load_resources(game_render_target).await;
-    let mixer = SoundMixer::new();
 
     let game_states: Vec<(GameStateIdentifier, Box<dyn GameState>)> = vec![
         (GameStateIdentifier::Menu, Box::new(GameStateMenu::new())),
@@ -42,7 +39,7 @@ async fn main() {
             Box::new(GameStateGame::new(&resources)),
         ),
     ];
-    let mut game_manager = GameManager::new(game_states, resources, mixer);
+    let mut game_manager = GameManager::new(game_states, resources);
 
     loop {
         let dt = get_frame_time();
@@ -91,8 +88,6 @@ async fn main() {
         );
 
         game_manager.draw_unscaled();
-
-        game_manager.frame_sounds();
 
         next_frame().await
     }

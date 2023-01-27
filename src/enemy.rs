@@ -1,5 +1,4 @@
 use macroquad::prelude::*;
-use quad_snd::mixer::{SoundMixer, Volume};
 
 use crate::{
     bullet::{Bullet, BulletHurtType},
@@ -129,7 +128,6 @@ impl Enemy {
         resources: &Resources,
         player_pos: &Vec2,
         game_manager: &mut WaveManager,
-        sound_mixer: &mut SoundMixer,
     ) {
         let command_optional = match &mut self.state {
             EnemyState::Spawning(state_data) => {
@@ -144,14 +142,12 @@ impl Enemy {
                 bullets,
                 resources,
                 state_data,
-                sound_mixer,
             ),
             EnemyState::Homing(_state_data) => Self::update_state_homing(
                 &mut self.state_shared,
                 dt,
                 player_pos,
                 game_manager,
-                sound_mixer,
                 resources,
             ),
         };
@@ -259,7 +255,6 @@ impl Enemy {
         bullets: &mut Vec<Bullet>,
         resources: &Resources,
         state_data: &mut EnemyStateShooting,
-        sound_mixer: &mut SoundMixer,
     ) -> Option<EnemyCommand> {
         state_shared.pos.x += rand::gen_range(-1f32, 1f32) * ENEMY_SPEED * 0.5f32 * dt;
         state_shared.pos.y += rand::gen_range(-1f32, 1f32) * ENEMY_SPEED * 0.5f32 * dt;
@@ -291,7 +286,7 @@ impl Enemy {
                     resources,
                 ));
             }
-            resources.play_sound(SoundIdentifier::EnemyShoot, sound_mixer, Volume(1.0f32));
+            resources.play_sfx(SoundIdentifier::EnemyShoot, 1.0);
 
             // for fun move enemy up when shooting
             state_shared.pos.y -= 2f32;
@@ -319,13 +314,12 @@ impl Enemy {
         dt: f32,
         player_pos: &Vec2,
         game_manager: &mut WaveManager,
-        sound_mixer: &mut SoundMixer,
         resources: &Resources,
     ) -> Option<EnemyCommand> {
         state_shared.animation_timer += dt;
         if state_shared.animation_timer > ENEMY_ANIM_TIME_FLAP * 4f32 {
             state_shared.animation_timer -= ENEMY_ANIM_TIME_FLAP * 4f32;
-            resources.play_sound(SoundIdentifier::Warning, sound_mixer, Volume(1.0f32));
+            resources.play_sfx(SoundIdentifier::Warning, 1.0);
         }
         // MOVE TOWARDS PLAYER
         let player_dx = player_pos.x - state_shared.pos.x;

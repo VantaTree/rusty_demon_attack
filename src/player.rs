@@ -1,5 +1,4 @@
 use macroquad::prelude::*;
-use quad_snd::mixer::{SoundMixer, Volume};
 
 use crate::{
     bullet::{Bullet, BulletHurtType},
@@ -60,7 +59,6 @@ impl Player {
         dt: f32,
         bullets: &mut Vec<Bullet>,
         resources: &Resources,
-        sound_mixer: &mut SoundMixer,
     ) {
         self.shoot_timer += dt;
         if is_key_down(KEY_LEFT) {
@@ -86,10 +84,9 @@ impl Player {
                         BulletHurtType::Enemy,
                         resources,
                     ));
-                    resources.play_sound(
+                    resources.play_sfx(
                         SoundIdentifier::PlayerShoot,
-                        sound_mixer,
-                        Volume(1.0f32),
+                        1.0,
                     );
                     self.shoot_timer = 0f32;
                 }

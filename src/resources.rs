@@ -1,9 +1,5 @@
 use macroquad::prelude::*;
-use quad_snd::{
-    decoder::read_wav_ext,
-    mixer::{PlaybackStyle, SoundMixer},
-    mixer::{Sound, Volume},
-};
+use macroquad::audio::{Sound, PlaySoundParams, load_sound, play_sound};
 use std::collections::HashMap;
 
 use crate::enemy::{EnemyColor, EnemyType};
@@ -68,14 +64,15 @@ impl Resources {
         }
     }
 
-    pub fn load_sound(&mut self, bytes: &[u8], identifier: SoundIdentifier) {
-        let sound = read_wav_ext(bytes, PlaybackStyle::Once).unwrap();
+    pub async fn load_sound(&mut self, file_path: &str, identifier: SoundIdentifier) {
+        let sound = load_sound(file_path).await.unwrap();
         self.sounds.insert(identifier, sound);
     }
 
-    pub fn play_sound(&self, identifier: SoundIdentifier, mixer: &mut SoundMixer, volume: Volume) {
+    pub fn play_sfx(&self, identifier: SoundIdentifier, volume: f32) {
         if let Some(sound) = self.sounds.get(&identifier) {
-            mixer.play_ext(sound.clone(), volume);
+            play_sound(*sound, PlaySoundParams{looped:false, volume});
+            debug!("DEBUG:: sound played");
         }
     }
 
@@ -120,20 +117,6 @@ impl Resources {
         mini_list[rand::gen_range(0, mini_list.len())]
     }
 }
-
-const SOUND_BYTES_SPAWN: &[u8] = include_bytes!("../resources/sounds/spawn.wav");
-const SOUND_BYTES_ENEMY_SHOOT: &[u8] =
-    include_bytes!("../resources/sounds/enemy_shoot.wav");
-const SOUND_BYTES_PLAYER_SHOOT: &[u8] =
-    include_bytes!("../resources/sounds/player_shoot.wav");
-
-const SOUND_BYTES_PLAYER_OUCH: &[u8] =
-    include_bytes!("../resources/sounds/player_ouch.wav");
-const SOUND_BYTES_ENEMY_OUCH: &[u8] = include_bytes!("../resources/sounds/enemy_ouch.wav");
-const SOUND_BYTES_SPAWN_MINI: &[u8] = include_bytes!("../resources/sounds/spawn_mini.wav");
-const SOUND_BYTES_WARNING: &[u8] = include_bytes!("../resources/sounds/warning.wav");
-const SOUND_BYTES_WAVE_CLEARED: &[u8] =
-    include_bytes!("../resources/sounds/wave_cleared.wav");
 
 pub async fn load_resources(game_render_target: RenderTarget) -> Resources {
     let texture_player: Texture2D = load_texture("resources/player.png").await.unwrap();
@@ -213,14 +196,15 @@ pub async fn load_resources(game_render_target: RenderTarget) -> Resources {
     }
     {
         use SoundIdentifier::*;
-        resources.load_sound(SOUND_BYTES_ENEMY_SHOOT, EnemyShoot);
-        resources.load_sound(SOUND_BYTES_PLAYER_SHOOT, PlayerShoot);
-        resources.load_sound(SOUND_BYTES_SPAWN, Spawn);
-        resources.load_sound(SOUND_BYTES_PLAYER_OUCH, PlayerOuch);
-        resources.load_sound(SOUND_BYTES_ENEMY_OUCH, EnemyOuch);
-        resources.load_sound(SOUND_BYTES_SPAWN_MINI, SpawnMini);
-        resources.load_sound(SOUND_BYTES_WARNING, Warning);
-        resources.load_sound(SOUND_BYTES_WAVE_CLEARED, WaveCleared);
+
+        resources.load_sound("resources/sounds/enemy_shoot.wav", EnemyShoot).await;
+        resources.load_sound("resources/sounds/player_shoot.wav", PlayerShoot).await;
+        resources.load_sound("resources/sounds/spawn.wav", Spawn).await;
+        resources.load_sound("resources/sounds/player_ouch.wav", PlayerOuch).await;
+        resources.load_sound("resources/sounds/enemy_ouch.wav", EnemyOuch).await;
+        resources.load_sound("resources/sounds/spawn_mini.wav", SpawnMini).await;
+        resources.load_sound("resources/sounds/warning.wav", Warning).await;
+        resources.load_sound("resources/sounds/wave_cleared.wav", WaveCleared).await;
     }
     resources
 }

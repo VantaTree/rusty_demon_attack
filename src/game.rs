@@ -15,8 +15,6 @@ use crate::{
     },
 };
 
-use quad_snd::mixer::{SoundMixer, Volume};
-
 // okay this is pretty hacky...
 // if last kill was from player then a life should've been gained, so animate lives
 pub fn draw_lives(
@@ -89,7 +87,6 @@ pub trait GameState {
         &mut self,
         dt: f32,
         resources: &Resources,
-        sound_mixer: &mut SoundMixer,
     ) -> Option<GameStateCommand>;
     fn draw(&self, resources: &Resources);
     fn draw_unscaled(&self, resources: &Resources);
@@ -142,11 +139,10 @@ impl GameState for GameStateGame {
         &mut self,
         dt: f32,
         resources: &Resources,
-        sound_mixer: &mut SoundMixer,
     ) -> Option<GameStateCommand> {
         let manager_message_optional =
             self.wave_manager
-                .update(dt, &mut self.enemies, resources, sound_mixer);
+                .update(dt, &mut self.enemies, resources);
         if let Some(manager_message) = manager_message_optional {
             match manager_message {
                 WaveManagerMessage::LevelCleared => {
@@ -156,7 +152,7 @@ impl GameState for GameStateGame {
                         LastEnemyDeathReason::Environment => SCORE_SURVIVED_ALL,
                         LastEnemyDeathReason::Player => SCORE_KILL_ALL,
                     };
-                    resources.play_sound(SoundIdentifier::WaveCleared, sound_mixer, Volume(0.6f32));
+                    resources.play_sfx(SoundIdentifier::WaveCleared, 0.6);
                     self.player_score += score_add;
                 }
             }
@@ -169,7 +165,6 @@ impl GameState for GameStateGame {
                 resources,
                 &self.player.pos,
                 &mut self.wave_manager,
-                sound_mixer,
             );
             enemy.draw();
         }
@@ -190,7 +185,7 @@ impl GameState for GameStateGame {
                     continue;
                 }
                 self.player_lives -= 1;
-                resources.play_sound(SoundIdentifier::PlayerOuch, sound_mixer, Volume(1.0f32));
+                resources.play_sfx(SoundIdentifier::PlayerOuch, 1.0);
                 // CHANGE PLAYER STATE
                 self.player
                     .process_command_optional(Some(PlayerCommand::ChangeState(
@@ -221,7 +216,7 @@ impl GameState for GameStateGame {
                     variant_eq(&self.player.state, &PlayerState::Invisible(0f32));
                 if !player_invisible {
                     self.player_lives -= 1;
-                    resources.play_sound(SoundIdentifier::PlayerOuch, sound_mixer, Volume(1.0f32));
+                    resources.play_sfx(SoundIdentifier::PlayerOuch, 1.0);
                     self.player
                         .process_command_optional(Some(PlayerCommand::ChangeState(
                             PlayerState::Invisible(PLAYER_TIME_INVISBLE),
@@ -247,10 +242,9 @@ impl GameState for GameStateGame {
                     self.wave_manager.last_enemy_death_reason = LastEnemyDeathReason::Player;
                     // death
                     if enemy.state_shared.health <= 0 {
-                        resources.play_sound(
+                        resources.play_sfx(
                             SoundIdentifier::EnemyOuch,
-                            sound_mixer,
-                            Volume(1.0f32),
+                            1.0,
                         );
                         death_methods.push((
                             enemy.state_shared.pos,
@@ -274,7 +268,7 @@ impl GameState for GameStateGame {
             match death_method {
                 EnemyDeathMethod::None => {}
                 EnemyDeathMethod::SpawnChildren(amount) => {
-                    resources.play_sound(SoundIdentifier::SpawnMini, sound_mixer, Volume(1.0f32));
+                    resources.play_sfx(SoundIdentifier::SpawnMini, 1.0);
                     let spawn_width = 20f32;
                     let step = 1. / (*amount as f32);
                     for i in 0..*amount {
@@ -315,7 +309,7 @@ impl GameState for GameStateGame {
         );
 
         self.player
-            .update(dt, &mut self.bullets, resources, sound_mixer);
+            .update(dt, &mut self.bullets, resources);
         self.player.draw();
         None
     }
@@ -347,6 +341,7 @@ impl GameState for GameStateGame {
                 font_scale: 1f32,
                 color: YELLOW,
                 font_scale_aspect: 1f32,
+                rotation:0.0,
             },
         );
     }
@@ -369,7 +364,6 @@ impl GameState for GameStateMenu {
         &mut self,
         _dt: f32,
         _resources: &Resources,
-        _sound_mixer: &mut SoundMixer,
     ) -> Option<GameStateCommand> {
         if is_key_pressed(KEY_START_GAME) {
             return Some(GameStateCommand::ChangeState(
@@ -431,6 +425,7 @@ impl GameState for GameStateMenu {
                     font_scale: 1f32,
                     color: YELLOW,
                     font_scale_aspect: 1f32,
+                    rotation:0.0,
                 },
             );
         }
@@ -448,6 +443,7 @@ impl GameState for GameStateMenu {
                 font_scale: 1f32,
                 color: YELLOW,
                 font_scale_aspect: 1f32,
+                rotation:0.0,
             },
         );
     }
@@ -457,14 +453,12 @@ pub struct GameManager {
     states: HashMap<GameStateIdentifier, Box<dyn GameState>>,
     current_state_identifier: GameStateIdentifier,
     resources: Resources,
-    sound_mixer: SoundMixer,
 }
 
 impl GameManager {
     pub fn new(
         all_states: Vec<(GameStateIdentifier, Box<dyn GameState>)>,
         resources: Resources,
-        sound_mixer: SoundMixer,
     ) -> Self {
         let mut states = HashMap::new();
         for state in all_states.into_iter() {
@@ -474,12 +468,7 @@ impl GameManager {
             states,
             current_state_identifier: GameStateIdentifier::Menu,
             resources,
-            sound_mixer,
         }
-    }
-
-    pub fn frame_sounds(&mut self) {
-        self.sound_mixer.frame();
     }
 
     pub fn update(&mut self, dt: f32) {
@@ -489,7 +478,7 @@ impl GameManager {
         // (we can't set state if we are holding a reference to the current state)
         let state_command_optional =
             if let Some(game_state) = self.states.get_mut(&self.current_state_identifier) {
-                game_state.update(dt, &self.resources, &mut self.sound_mixer)
+                game_state.update(dt, &self.resources)
             } else {
                 None
             };
